@@ -18,6 +18,10 @@ if 'page' not in st.session_state:
     st.session_state.page = 0
     st.session_state.data = {}
 
+# Function to change pages without using experimental_rerun
+def change_page(page_number):
+    st.session_state.page = page_number
+
 # Helper functions
 def calculate_age(dob):
     """Calculate age from date of birth"""
@@ -507,8 +511,7 @@ if st.session_state.page == 0:  # Datos Personales
     st.markdown("---")
     if dob and valid_height and valid_weight:
         if st.button("Continuar a Antecedentes →", type="primary"):
-            st.session_state.page = 1
-            st.experimental_rerun()
+            change_page(1)
     else:
         st.warning("Complete todos los campos obligatorios para continuar")
 
@@ -587,12 +590,10 @@ elif st.session_state.page == 1:  # Antecedentes
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("← Volver a Datos Personales"):
-            st.session_state.page = 0
-            st.experimental_rerun()
+            change_page(0)
     with col2:
         if st.button("Continuar a Historia de Pólipos →", type="primary"):
-            st.session_state.page = 2
-            st.experimental_rerun()
+            change_page(2)
 
 elif st.session_state.page == 2:  # Historia de Pólipos
     st.subheader("Historial de pólipos")
@@ -650,12 +651,10 @@ elif st.session_state.page == 2:  # Historia de Pólipos
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("← Volver a Antecedentes"):
-            st.session_state.page = 1
-            st.experimental_rerun()
+            change_page(1)
     with col2:
         if st.button("Continuar a Síntomas →", type="primary"):
-            st.session_state.page = 3
-            st.experimental_rerun()
+            change_page(3)
 
 elif st.session_state.page == 3:  # Síntomas
     st.subheader("Síntomas actuales")
@@ -715,12 +714,10 @@ elif st.session_state.page == 3:  # Síntomas
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("← Volver a Historia de Pólipos"):
-            st.session_state.page = 2
-            st.experimental_rerun()
+            change_page(2)
     with col2:
         if st.button("Continuar a Evaluación →", type="primary"):
-            st.session_state.page = 4
-            st.experimental_rerun()
+            change_page(4)
 
 elif st.session_state.page == 4:  # Evaluación
     st.subheader("Evaluación de riesgo")
@@ -896,8 +893,7 @@ elif st.session_state.page == 4:  # Evaluación
     # Navigation buttons
     st.markdown("---")
     if st.button("← Volver a Síntomas"):
-        st.session_state.page = 3
-        st.experimental_rerun()
+        change_page(3)
 
 # Footer with disclaimer and links
 st.markdown("---")
