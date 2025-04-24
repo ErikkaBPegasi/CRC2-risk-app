@@ -1,9 +1,84 @@
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 from io import BytesIO
 from fpdf import FPDF
 import json
+
+if 'current_tab' not in st.session_state:
+    st.session_state.current_tab = 0  # Start with the first tab
+
+# Define a function to change tabs
+def navigate_to_tab(tab_index):
+    st.session_state.current_tab = tab_index
+
+# Replace your current tabs creation with this:
+tab_titles = ["Datos Personales", "Antecedentes", "Historia de Pólipos", "Síntomas", "Evaluación"]
+tabs = st.tabs(tab_titles)
+
+# Now use the tabs with the session state
+with tabs[st.session_state.current_tab]:
+    if st.session_state.current_tab == 0:  # Datos Personales tab
+        st.subheader("Datos personales básicos")
+        
+        # ... existing code for tab1 ...
+        
+        # Add a next button at the bottom of this tab
+        if dob and valid_height and valid_weight:
+            if st.button("Continuar a Antecedentes →"):
+                navigate_to_tab(1)
+        else:
+            st.info("Complete todos los campos para continuar")
+            
+    elif st.session_state.current_tab == 1:  # Antecedentes tab
+        st.subheader("Antecedentes de salud")
+        
+        # ... existing code for tab2 ...
+        
+        # Add navigation buttons
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("← Volver a Datos Personales"):
+                navigate_to_tab(0)
+        with col2:
+            if st.button("Continuar a Historia de Pólipos →"):
+                navigate_to_tab(2)
+                
+    elif st.session_state.current_tab == 2:  # Historia de Pólipos tab
+        # ... existing code for tab3 ...
+        
+        # Add navigation buttons
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("← Volver a Antecedentes"):
+                navigate_to_tab(1)
+        with col2:
+            if st.button("Continuar a Síntomas →"):
+                navigate_to_tab(3)
+                
+    elif st.session_state.current_tab == 3:  # Síntomas tab
+        # ... existing code for tab4 ...
+        
+        # Add navigation buttons
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("← Volver a Historia de Pólipos"):
+                navigate_to_tab(2)
+        with col2:
+            if st.button("Continuar a Evaluación →"):
+                navigate_to_tab(4)
+                
+    elif st.session_state.current_tab == 4:  # Evaluación tab
+        # ... existing code for tab5 ...
+        
+        # Add a back button only
+        if st.button("← Volver a Síntomas"):
+            navigate_to_tab(3)
 
 # Set page configuration
 st.set_page_config(
@@ -44,101 +119,154 @@ def validate_numeric_input(value, min_val=0, max_val=None):
 
 
 def generate_pdf(edad, imc, resumen, categoria_riesgo, recomendacion, lifestyle_advice=None, symptoms_flag=False):
-    """Generate PDF with assessment results and educational content"""
-    pdf = FPDF()
-    pdf.add_page()
-
-    # Header
-    pdf.set_font("Arial", style="B", size=16)
-    pdf.cell(
-        200, 10, txt="Evaluación de Riesgo para Cáncer Colorrectal", ln=1, align="C")
-    pdf.set_font("Arial", style="I", size=10)
-    pdf.cell(
-        200, 6, txt="Basado en Guías del Instituto Nacional del Cáncer Argentina", ln=1, align="C")
-    pdf.ln(10)
-
+    """Generate PDF with assessment results and educational content using ReportLab"""
+    buffer = BytesIO()
+    
+    # Create the PDF document
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    # Container for PDF elements
+    elements = []
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    
+    # Create custom styles
+    title_style = ParagraphStyle(
+        'Title',
+        parent=styles['Title'],
+        fontSize=16,
+        alignment=1,  # Center
+        spaceAfter=12
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'Subtitle',
+        parent=styles['Italic'],
+        fontSize=10,
+        alignment=1,  # Center
+        spaceAfter=20
+    )
+    
+    heading_style = ParagraphStyle(
+        'Heading',
+        parent=styles['Heading2'],
+        fontSize=12,
+        spaceBefore=15,
+        spaceAfter=6
+    )
+    
+    normal_style = ParagraphStyle(
+        'Normal',
+        parent=styles['Normal'],
+        fontSize=11,
+        spaceAfter=6
+    )
+    
+    high_risk_style = ParagraphStyle(
+        'HighRisk',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=colors.red,
+        spaceAfter=6
+    )
+    
+    medium_risk_style = ParagraphStyle(
+        'MediumRisk',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=colors.blue,
+        spaceAfter=6
+    )
+    
+    low_risk_style = ParagraphStyle(
+        'LowRisk',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=colors.green,
+        spaceAfter=6
+    )
+    
+    disclaimer_style = ParagraphStyle(
+        'Disclaimer',
+        parent=styles['Italic'],
+        fontSize=9,
+        spaceAfter=3
+    )
+    
+    # Add title
+    elements.append(Paragraph("Evaluación de Riesgo para Cáncer Colorrectal", title_style))
+    elements.append(Paragraph("Basado en Guías del Instituto Nacional del Cáncer Argentina", subtitle_style))
+    
     # Basic information
-    pdf.set_font("Arial", style="B", size=12)
-    pdf.cell(200, 8, txt="Información Personal", ln=1)
-    pdf.set_font("Arial", size=11)
-
-    pdf.cell(200, 8, txt=f"Edad: {edad} años", ln=1)
-    pdf.cell(200, 8, txt=f"IMC: {imc} kg/m²", ln=1)
-
+    elements.append(Paragraph("Información Personal", heading_style))
+    elements.append(Paragraph(f"Edad: {edad} años", normal_style))
+    elements.append(Paragraph(f"IMC: {imc} kg/m²", normal_style))
+    
     # Risk category with formatting
-    pdf.ln(5)
-    pdf.set_font("Arial", style="B", size=12)
-    pdf.cell(200, 8, txt="Categoría de Riesgo", ln=1)
-    pdf.set_font("Arial", style="B", size=11)
-
+    elements.append(Paragraph("Categoría de Riesgo", heading_style))
+    
     if "Alto" in categoria_riesgo:
-        pdf.set_text_color(255, 0, 0)  # Red for high risk
+        elements.append(Paragraph(f"{categoria_riesgo}", high_risk_style))
     elif "Incrementado" in categoria_riesgo or "Intermedio" in categoria_riesgo:
-        pdf.set_text_color(0, 0, 255)  # Blue for intermediate risk
+        elements.append(Paragraph(f"{categoria_riesgo}", medium_risk_style))
     else:
-        pdf.set_text_color(0, 128, 0)  # Green for average risk
-
-    pdf.cell(200, 8, txt=f"{categoria_riesgo}", ln=1)
-    pdf.set_text_color(0, 0, 0)  # Reset to black
-
+        elements.append(Paragraph(f"{categoria_riesgo}", low_risk_style))
+    
     # Symptom warning if applicable
     if symptoms_flag:
-        pdf.ln(3)
-        pdf.set_font("Arial", style="B", size=11)
-        pdf.set_text_color(255, 0, 0)  # Red
-        pdf.cell(
-            200, 8, txt="IMPORTANTE: Los síntomas que has reportado requieren atención médica", ln=1)
-        pdf.cell(
-            200, 8, txt="inmediata, independientemente de tu categoría de riesgo.", ln=1)
-        pdf.set_text_color(0, 0, 0)  # Reset to black
-
+        elements.append(Spacer(1, 0.1*inch))
+        elements.append(Paragraph("IMPORTANTE: Los síntomas que has reportado requieren atención médica inmediata, independientemente de tu categoría de riesgo.", high_risk_style))
+    
     # Recommendations
-    pdf.ln(5)
-    pdf.set_font("Arial", style="B", size=12)
-    pdf.cell(200, 8, txt="Recomendaciones de Tamizaje", ln=1)
-    pdf.set_font("Arial", size=11)
-
+    elements.append(Paragraph("Recomendaciones de Tamizaje", heading_style))
+    
     # Clean markdown from recommendation for PDF
     clean_recommendation = recomendacion.replace('**', '').replace('✅', '→').replace(
         '🟡', '→').replace('🔍', '→').replace('📹', '→').replace('🔬', '→').replace('🧭', '→')
-    pdf.multi_cell(0, 7, clean_recommendation)
-
+    elements.append(Paragraph(clean_recommendation, normal_style))
+    
     # Summary
-    pdf.ln(3)
-    pdf.set_font("Arial", style="B", size=12)
-    pdf.cell(200, 8, txt="Resumen", ln=1)
-    pdf.set_font("Arial", size=11)
+    elements.append(Paragraph("Resumen", heading_style))
     clean_summary = resumen.replace('📝', '')
-    pdf.multi_cell(0, 7, clean_summary)
-
+    elements.append(Paragraph(clean_summary, normal_style))
+    
     # Add lifestyle advice if provided
     if lifestyle_advice:
-        pdf.ln(5)
-        pdf.set_font("Arial", style="B", size=12)
-        pdf.cell(200, 8, txt="Recomendaciones para Reducir el Riesgo", ln=1)
-        pdf.set_font("Arial", size=11)
-        pdf.multi_cell(0, 7, lifestyle_advice)
-
+        elements.append(Paragraph("Recomendaciones para Reducir el Riesgo", heading_style))
+        elements.append(Paragraph(lifestyle_advice, normal_style))
+    
     # Add information about screening intervals
-    pdf.ln(5)
-    pdf.set_font("Arial", style="B", size=12)
-    pdf.cell(200, 8, txt="Información sobre Métodos de Tamizaje", ln=1)
-    pdf.set_font("Arial", size=11)
-    pdf.multi_cell(0, 6, "• Test de sangre oculta inmunoquímico (TSOMFi): Detecta sangre en las heces que podría indicar pólipos o cáncer. Es simple y no invasivo.\n• Colonoscopía: Examen visual directo del colon completo, permite la detección y extirpación de pólipos durante el procedimiento.\n• Rectosigmoidoscopía: Examina el tercio inferior del colon y es menos invasiva que la colonoscopía completa.")
-
+    elements.append(Paragraph("Información sobre Métodos de Tamizaje", heading_style))
+    elements.append(Paragraph(
+        "• Test de sangre oculta inmunoquímico (TSOMFi): Detecta sangre en las heces que podría indicar pólipos o cáncer. Es simple y no invasivo.<br/>"
+        "• Colonoscopía: Examen visual directo del colon completo, permite la detección y extirpación de pólipos durante el procedimiento.<br/>"
+        "• Rectosigmoidoscopía: Examina el tercio inferior del colon y es menos invasiva que la colonoscopía completa.",
+        normal_style
+    ))
+    
     # Disclaimer and footer
-    pdf.ln(5)
-    pdf.set_font("Arial", style="I", size=9)
-    pdf.multi_cell(0, 5, "Esta evaluación es informativa y está basada en la guía \"Recomendaciones para el tamizaje de CCR en población de riesgo promedio en Argentina\" del Instituto Nacional del Cáncer. No reemplaza la consulta médica. Comparta estos resultados con su profesional de salud para una evaluación personalizada.")
-
-    pdf.ln(3)
-    pdf.set_font("Arial", style="B", size=9)
-    pdf.cell(
-        200, 5, txt=f"Fecha de evaluación: {datetime.today().strftime('%d/%m/%Y')}", ln=1)
-
-    # Output to buffer
-    buffer = BytesIO()
-    pdf.output(buffer)
+    elements.append(Spacer(1, 0.2*inch))
+    elements.append(Paragraph(
+        "Esta evaluación es informativa y está basada en la guía \"Recomendaciones para el tamizaje de CCR en población de riesgo promedio en Argentina\" del Instituto Nacional del Cáncer. No reemplaza la consulta médica. Comparta estos resultados con su profesional de salud para una evaluación personalizada.",
+        disclaimer_style
+    ))
+    
+    elements.append(Spacer(1, 0.1*inch))
+    elements.append(Paragraph(
+        f"Fecha de evaluación: {datetime.today().strftime('%d/%m/%Y')}",
+        disclaimer_style
+    ))
+    
+    # Build the PDF
+    doc.build(elements)
     buffer.seek(0)
     return buffer
 
@@ -681,139 +809,136 @@ with tab5:
             "polyp_size": polyp_size
         }
 
-        # Button to evaluate risk
-        if st.button("Evaluar riesgo", type="primary"):
-            try:
-                st.markdown("---")
-                st.subheader("Estrategia de tamizaje recomendada")
+ # Button to evaluate risk
+if st.button("Evaluar riesgo", type="primary"):
+    try:
+        st.markdown("---")
+        st.subheader("Estrategia de tamizaje recomendada")
 
-                # Get comprehensive risk assessment
-                risk_category, recommendation, summary, lifestyle_advice, symptoms_detail, bmi_note, symptoms_warning = evaluate_risk(
-                    age, bmi, personal_history, family_history, polyp_history, any_symptoms
-                )
+        # Get comprehensive risk assessment
+        risk_category, recommendation, summary, lifestyle_advice, symptoms_detail, bmi_note, symptoms_warning = evaluate_risk(
+            age, bmi, personal_history, family_history, polyp_history, any_symptoms
+        )
 
-                # Display risk category with appropriate styling
-                if "Alto" in risk_category:
-                    st.error(f"**{risk_category}**")
-                elif "Incrementado" in risk_category or "Intermedio" in risk_category:
-                    st.info(f"**{risk_category}**")
-                else:
-                    st.success(f"**{risk_category}**")
+        # Display risk category with appropriate styling
+        if "Alto" in risk_category:
+            st.error(f"**{risk_category}**")
+        elif "Incrementado" in risk_category or "Intermedio" in risk_category:
+            st.info(f"**{risk_category}**")
+        else:
+            st.success(f"**{risk_category}**")
 
-                # Display recommendation
-                st.markdown(recommendation)
+        # Display recommendation
+        st.markdown(recommendation)
 
-                # Display BMI note if applicable
-                if bmi_note:
-                    st.markdown(bmi_note)
+        # Display BMI note if applicable
+        if bmi_note:
+            st.markdown(bmi_note)
 
-                # Display symptoms warning if applicable
-                if any_symptoms:
-                    st.error(symptoms_warning)
-                    st.markdown(symptoms_detail)
+        # Display symptoms warning if applicable
+        if any_symptoms:
+            st.error(symptoms_warning)
+            st.markdown(symptoms_detail)
 
-                # Display timeline visualization for screening intervals
-                st.subheader("Cronograma de tamizaje recomendado")
+        # Display timeline visualization for screening intervals
+        st.subheader("Cronograma de tamizaje recomendado")
 
-                # Create a basic timeline based on risk category
-                current_year = datetime.now().year
+        # Create a basic timeline based on risk category
+        current_year = datetime.now().year
 
-                if "Alto" in risk_category:
-                    if "Lynch" in risk_category or "Poliposis" in risk_category:
-                        interval = 1
-                        timeline_years = 10
-                    else:
-                        interval = 3
-                        timeline_years = 12
-                elif "Incrementado" in risk_category or "Intermedio" in risk_category:
-                    interval = 5
-                    timeline_years = 15
-                else:
-                    if 50 <= age <= 75:
-                        interval = 2  # For TSOMFi
-                        timeline_years = 10
-                    else:
-                        interval = None
-                        timeline_years = 0
+        if "Alto" in risk_category:
+            if "Lynch" in risk_category or "Poliposis" in risk_category:
+                interval = 1
+                timeline_years = 10
+            else:
+                interval = 3
+                timeline_years = 12
+        elif "Incrementado" in risk_category or "Intermedio" in risk_category:
+            interval = 5
+            timeline_years = 15
+        else:
+            if 50 <= age <= 75:
+                interval = 2  # For TSOMFi
+                timeline_years = 10
+            else:
+                interval = None
+                timeline_years = 0
 
-                if interval:
-                    years = [
-                        current_year + i*interval for i in range(int(timeline_years/interval) + 1)]
-                    timeline_data = pd.DataFrame({
-                        'Año': years,
-                        'Tamizaje': [f"Tamizaje #{i+1}" for i in range(len(years))]
-                    })
+        if interval:
+            years = [
+                current_year + i*interval for i in range(int(timeline_years/interval) + 1)]
+            timeline_data = pd.DataFrame({
+                'Año': years,
+                'Tamizaje': [f"Tamizaje #{i+1}" for i in range(len(years))]
+            })
 
-                    st.dataframe(timeline_data, hide_index=True)
-                else:
-                    if age < 50:
-                        st.info("No se recomienda tamizaje de rutina antes de los 50 años para personas de riesgo promedio. Consulta con tu médico cuando cumplas 50 años o si desarrollas síntomas.")
-                    elif age > 75:
-                        st.info("El tamizaje de rutina no está recomendado después de los 75 años. Tu médico evaluará individualmente la necesidad de continuar el tamizaje basado en tu estado de salud general y expectativa de vida.")
+            st.dataframe(timeline_data, hide_index=True)
+        else:
+            if age < 50:
+                st.info("No se recomienda tamizaje de rutina antes de los 50 años para personas de riesgo promedio. Consulta con tu médico cuando cumplas 50 años o si desarrollas síntomas.")
+            elif age > 75:
+                st.info("El tamizaje de rutina no está recomendado después de los 75 años. Tu médico evaluará individualmente la necesidad de continuar el tamizaje basado en tu estado de salud general y expectativa de vida.")
 
-                # Display lifestyle recommendations
-                st.subheader("Recomendaciones para reducir el riesgo")
-                st.markdown(lifestyle_advice)
+        # Display lifestyle recommendations
+        st.subheader("Recomendaciones para reducir el riesgo")
+        st.markdown(lifestyle_advice)
 
-                # Display summary
-                st.markdown("---")
-                st.markdown(f"### **Resumen final:** {summary}")
+        # Display summary
+        st.markdown("---")
+        st.markdown(f"### **Resumen final:** {summary}")
 
-                # Option to download PDF
-                st.subheader("Guardar resultados")
+        # Option to download PDF
+        st.subheader("Guardar resultados")
 
-                # Ensure all variables needed for PDF generation exist and are properly formatted
-                try:
-                    # Generate PDF with proper error handling
-                    pdf_buffer = generate_pdf(
-                        str(age) if age is not None else "No disponible",
-                        str(bmi) if bmi is not None else "No disponible",
-                        summary if summary is not None else "Consulta con tu médico para recomendaciones específicas.",
-                        risk_category if risk_category is not None else "No categorizado",
-                        recommendation if recommendation is not None else "Consulta con un profesional de la salud.",
-                        lifestyle_advice if lifestyle_advice is not None else "Mantén un estilo de vida saludable.",
-                        any_symptoms
-                    )
+        # Ensure all variables needed for PDF generation exist and are properly formatted
+        try:
+            # Generate PDF with ReportLab - no need to sanitize text as ReportLab handles Unicode well
+            pdf_buffer = generate_pdf(
+                str(age) if age is not None else "No disponible",
+                str(bmi) if bmi is not None else "No disponible",
+                summary if summary is not None else "Consulta con tu médico para recomendaciones específicas.",
+                risk_category if risk_category is not None else "No categorizado",
+                recommendation if recommendation is not None else "Consulta con un profesional de la salud.",
+                lifestyle_advice if lifestyle_advice is not None else "Mantén un estilo de vida saludable.",
+                any_symptoms
+            )
 
-                    st.download_button(
-                        label="Descargar resultados en PDF",
-                        data=pdf_buffer,
-                        file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
-                        help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
-                    )
-                except Exception as e:
-                    st.error(f"No se pudo generar el PDF. Error: {str(e)}")
+            st.download_button(
+                label="Descargar resultados en PDF",
+                data=pdf_buffer,
+                file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
+            )
+        except Exception as e:
+            st.error(f"No se pudo generar el PDF. Error: {str(e)}")
 
-                # Save assessment to file option
-                st.markdown("---")
-                save_data = {
-                    "fecha_evaluacion": datetime.now().strftime("%Y-%m-%d"),
-                    "edad": age,
-                    "imc": bmi,
-                    "categoria_riesgo": risk_category,
-                    "recomendacion": recommendation,
-                    "resumen": summary
-                }
+        # Save assessment to file option
+        st.markdown("---")
+        save_data = {
+            "fecha_evaluacion": datetime.now().strftime("%Y-%m-%d"),
+            "edad": age,
+            "imc": bmi,
+            "categoria_riesgo": risk_category,
+            "recomendacion": recommendation,
+            "resumen": summary
+        }
 
-                try:
-                    st.download_button(
-                        label="Guardar datos en formato JSON",
-                        data=json.dumps(save_data, indent=4),
-                        file_name=f"datos_evaluacion_ccr_{datetime.now().strftime('%Y%m%d')}.json",
-                        mime="application/json",
-                        help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
-                    )
-                except Exception as e:
-                    st.error(
-                        f"No se pudo crear el archivo JSON. Error: {str(e)}")
+        try:
+            st.download_button(
+                label="Guardar datos en formato JSON",
+                data=json.dumps(save_data, indent=4),
+                file_name=f"datos_evaluacion_ccr_{datetime.now().strftime('%Y%m%d')}.json",
+                mime="application/json",
+                help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
+            )
+        except Exception as e:
+            st.error(f"No se pudo crear el archivo JSON. Error: {str(e)}")
 
-            except Exception as e:
-                st.error(
-                    f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
-    else:
-        st.warning(
-            "Por favor completa todos los campos obligatorios (fecha de nacimiento, altura y peso) para obtener tu evaluación de riesgo.")
+    except Exception as e:
+        st.error(f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
+else:
+    st.warning("Por favor completa todos los campos obligatorios (fecha de nacimiento, altura y peso) para obtener tu evaluación de riesgo.")
 
 # Footer with disclaimer and links - keep this outside the tab5 section
 st.markdown("---")
@@ -830,6 +955,6 @@ with col2:
     - [Tamizaje](https://www.argentina.gob.ar/salud/inc/lineas-programaticas/pnccr-tamizaje)
     """)
 
-st.caption(
-    "© 2025 - Desarrollado por PEGASI Chubut. Todos los derechos reservados.")
+# Add just one caption at the end
+st.caption("© 2025 - Desarrollado por PEGASI Chubut. Todos los derechos reservados.")
 
