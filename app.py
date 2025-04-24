@@ -2,11 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from io import BytesIO
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from fpdf import FPDF
 import json
 
 # Session state initialization
@@ -52,165 +48,116 @@ def validate_numeric_input(value, min_val=0, max_val=None):
         return False, "Please enter a valid number"
 
 def generate_pdf(edad, imc, resumen, categoria_riesgo, recomendacion, lifestyle_advice=None, symptoms_flag=False):
-    """Generate PDF with assessment results and educational content using ReportLab"""
-    buffer = BytesIO()
-    
-    # Create the PDF document
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        rightMargin=72,
-        leftMargin=72,
-        topMargin=72,
-        bottomMargin=72
-    )
-    
-    # Container for PDF elements
-    elements = []
-    
-    # Get styles
-    styles = getSampleStyleSheet()
-    
-    # Create custom styles
-    title_style = ParagraphStyle(
-        'Title',
-        parent=styles['Title'],
-        fontSize=16,
-        alignment=1,  # Center
-        spaceAfter=12
-    )
-    
-    subtitle_style = ParagraphStyle(
-        'Subtitle',
-        parent=styles['Italic'],
-        fontSize=10,
-        alignment=1,  # Center
-        spaceAfter=20
-    )
-    
-    heading_style = ParagraphStyle(
-        'Heading',
-        parent=styles['Heading2'],
-        fontSize=12,
-        spaceBefore=15,
-        spaceAfter=6
-    )
-    
-    normal_style = ParagraphStyle(
-        'Normal',
-        parent=styles['Normal'],
-        fontSize=11,
-        spaceAfter=6
-    )
-    
-    high_risk_style = ParagraphStyle(
-        'HighRisk',
-        parent=styles['Normal'],
-        fontSize=11,
-        textColor=colors.red,
-        spaceAfter=6
-    )
-    
-    medium_risk_style = ParagraphStyle(
-        'MediumRisk',
-        parent=styles['Normal'],
-        fontSize=11,
-        textColor=colors.blue,
-        spaceAfter=6
-    )
-    
-    low_risk_style = ParagraphStyle(
-        'LowRisk',
-        parent=styles['Normal'],
-        fontSize=11,
-        textColor=colors.green,
-        spaceAfter=6
-    )
-    
-    disclaimer_style = ParagraphStyle(
-        'Disclaimer',
-        parent=styles['Italic'],
-        fontSize=9,
-        spaceAfter=3
-    )
-    
-    # Add title
-    elements.append(Paragraph("Evaluación de Riesgo para Cáncer Colorrectal", title_style))
-    elements.append(Paragraph("Basado en Guías del Instituto Nacional del Cáncer Argentina", subtitle_style))
-    
+    """Generate PDF with assessment results and educational content"""
+    pdf = FPDF()
+    pdf.add_page()
+
+    # Helper function to sanitize text for FPDF
+    def sanitize_text(text):
+        if text is None:
+            return ""
+        # Replace problematic Unicode characters
+        return (text.replace('\u2013', '-')   # en dash
+                   .replace('\u2014', '-')    # em dash
+                   .replace('\u201C', '"')    # left double quote
+                   .replace('\u201D', '"')    # right double quote
+                   .replace('\u2019', "'")    # right single quote
+                   .replace('\u2018', "'")    # left single quote
+                   .replace('\u2022', '*')    # bullet
+                   .replace('\u2026', '...')) # ellipsis
+
+    # Header
+    pdf.set_font("Arial", style="B", size=16)
+    pdf.cell(
+        200, 10, txt="Evaluacion de Riesgo para Cancer Colorrectal", ln=1, align="C")
+    pdf.set_font("Arial", style="I", size=10)
+    pdf.cell(
+        200, 6, txt="Basado en Guias del Instituto Nacional del Cancer Argentina", ln=1, align="C")
+    pdf.ln(10)
+
     # Basic information
-    elements.append(Paragraph("Información Personal", heading_style))
-    elements.append(Paragraph(f"Edad: {edad} años", normal_style))
-    elements.append(Paragraph(f"IMC: {imc} kg/m²", normal_style))
-    
+    pdf.set_font("Arial", style="B", size=12)
+    pdf.cell(200, 8, txt="Informacion Personal", ln=1)
+    pdf.set_font("Arial", size=11)
+
+    pdf.cell(200, 8, txt=f"Edad: {edad} anos", ln=1)
+    pdf.cell(200, 8, txt=f"IMC: {imc} kg/m2", ln=1)
+
     # Risk category with formatting
-    elements.append(Paragraph("Categoría de Riesgo", heading_style))
-    
+    pdf.ln(5)
+    pdf.set_font("Arial", style="B", size=12)
+    pdf.cell(200, 8, txt="Categoria de Riesgo", ln=1)
+    pdf.set_font("Arial", style="B", size=11)
+
     if "Alto" in categoria_riesgo:
-        elements.append(Paragraph(f"{categoria_riesgo}", high_risk_style))
+        pdf.set_text_color(255, 0, 0)  # Red for high risk
     elif "Incrementado" in categoria_riesgo or "Intermedio" in categoria_riesgo:
-        elements.append(Paragraph(f"{categoria_riesgo}", medium_risk_style))
+        pdf.set_text_color(0, 0, 255)  # Blue for intermediate risk
     else:
-        elements.append(Paragraph(f"{categoria_riesgo}", low_risk_style))
-    
+        pdf.set_text_color(0, 128, 0)  # Green for average risk
+
+    pdf.cell(200, 8, txt=f"{sanitize_text(categoria_riesgo)}", ln=1)
+    pdf.set_text_color(0, 0, 0)  # Reset to black
+
     # Symptom warning if applicable
     if symptoms_flag:
-        elements.append(Spacer(1, 0.1*inch))
-        elements.append(Paragraph("IMPORTANTE: Los síntomas que has reportado requieren atención médica inmediata, independientemente de tu categoría de riesgo.", high_risk_style))
-    
+        pdf.ln(3)
+        pdf.set_font("Arial", style="B", size=11)
+        pdf.set_text_color(255, 0, 0)  # Red
+        pdf.cell(
+            200, 8, txt="IMPORTANTE: Los sintomas que has reportado requieren atencion medica", ln=1)
+        pdf.cell(
+            200, 8, txt="inmediata, independientemente de tu categoria de riesgo.", ln=1)
+        pdf.set_text_color(0, 0, 0)  # Reset to black
+
     # Recommendations
-    elements.append(Paragraph("Recomendaciones de Tamizaje", heading_style))
-    
-    # Clean markdown from recommendation for PDF
-    clean_recommendation = recomendacion.replace('**', '').replace('✅', '→').replace(
-        '🟡', '→').replace('🔍', '→').replace('📹', '→').replace('🔬', '→').replace('🧭', '→')
-    elements.append(Paragraph(clean_recommendation, normal_style))
-    
+    pdf.ln(5)
+    pdf.set_font("Arial", style="B", size=12)
+    pdf.cell(200, 8, txt="Recomendaciones de Tamizaje", ln=1)
+    pdf.set_font("Arial", size=11)
+
+    # Clean markdown and special characters from recommendation for PDF
+    clean_recommendation = sanitize_text(recomendacion)
+    clean_recommendation = clean_recommendation.replace('**', '').replace('✅', '->').replace(
+        '🟡', '->').replace('🔍', '->').replace('📹', '->').replace('🔬', '->').replace('🧭', '->')
+    pdf.multi_cell(0, 7, clean_recommendation)
+
     # Summary
-    elements.append(Paragraph("Resumen", heading_style))
-    clean_summary = resumen.replace('📝', '')
-    elements.append(Paragraph(clean_summary, normal_style))
-    
+    pdf.ln(3)
+    pdf.set_font("Arial", style="B", size=12)
+    pdf.cell(200, 8, txt="Resumen", ln=1)
+    pdf.set_font("Arial", size=11)
+    clean_summary = sanitize_text(resumen.replace('📝', ''))
+    pdf.multi_cell(0, 7, clean_summary)
+
     # Add lifestyle advice if provided
     if lifestyle_advice:
-        elements.append(Paragraph("Recomendaciones para Reducir el Riesgo", heading_style))
-        # Replace bullet points with proper formatting
-        clean_lifestyle = lifestyle_advice.replace('• ', '')
-        paragraphs = clean_lifestyle.split('\n')
-        for p in paragraphs:
-            if p.strip():
-                elements.append(Paragraph(p, normal_style))
-    
+        pdf.ln(5)
+        pdf.set_font("Arial", style="B", size=12)
+        pdf.cell(200, 8, txt="Recomendaciones para Reducir el Riesgo", ln=1)
+        pdf.set_font("Arial", size=11)
+        pdf.multi_cell(0, 7, sanitize_text(lifestyle_advice))
+
     # Add information about screening intervals
-    elements.append(Paragraph("Información sobre Métodos de Tamizaje", heading_style))
-    elements.append(Paragraph(
-        "• Test de sangre oculta inmunoquímico (TSOMFi): Detecta sangre en las heces que podría indicar pólipos o cáncer. Es simple y no invasivo.",
-        normal_style
-    ))
-    elements.append(Paragraph(
-        "• Colonoscopía: Examen visual directo del colon completo, permite la detección y extirpación de pólipos durante el procedimiento.",
-        normal_style
-    ))
-    elements.append(Paragraph(
-        "• Rectosigmoidoscopía: Examina el tercio inferior del colon y es menos invasiva que la colonoscopía completa.",
-        normal_style
-    ))
-    
+    pdf.ln(5)
+    pdf.set_font("Arial", style="B", size=12)
+    pdf.cell(200, 8, txt="Informacion sobre Metodos de Tamizaje", ln=1)
+    pdf.set_font("Arial", size=11)
+    pdf.multi_cell(0, 6, "* Test de sangre oculta inmunoquimico (TSOMFi): Detecta sangre en las heces que podria indicar polipos o cancer. Es simple y no invasivo.\n* Colonoscopia: Examen visual directo del colon completo, permite la deteccion y extirpacion de polipos durante el procedimiento.\n* Rectosigmoidoscopia: Examina el tercio inferior del colon y es menos invasiva que la colonoscopia completa.")
+
     # Disclaimer and footer
-    elements.append(Spacer(1, 0.2*inch))
-    elements.append(Paragraph(
-        "Esta evaluación es informativa y está basada en la guía \"Recomendaciones para el tamizaje de CCR en población de riesgo promedio en Argentina\" del Instituto Nacional del Cáncer. No reemplaza la consulta médica. Comparta estos resultados con su profesional de salud para una evaluación personalizada.",
-        disclaimer_style
-    ))
-    
-    elements.append(Spacer(1, 0.1*inch))
-    elements.append(Paragraph(
-        f"Fecha de evaluación: {datetime.today().strftime('%d/%m/%Y')}",
-        disclaimer_style
-    ))
-    
-    # Build the PDF
-    doc.build(elements)
+    pdf.ln(5)
+    pdf.set_font("Arial", style="I", size=9)
+    pdf.multi_cell(0, 5, "Esta evaluacion es informativa y esta basada en la guia \"Recomendaciones para el tamizaje de CCR en poblacion de riesgo promedio en Argentina\" del Instituto Nacional del Cancer. No reemplaza la consulta medica. Comparta estos resultados con su profesional de salud para una evaluacion personalizada.")
+
+    pdf.ln(3)
+    pdf.set_font("Arial", style="B", size=9)
+    pdf.cell(
+        200, 5, txt=f"Fecha de evaluacion: {datetime.today().strftime('%d/%m/%Y')}", ln=1)
+
+    # Output to buffer
+    buffer = BytesIO()
+    pdf.output(buffer)
     buffer.seek(0)
     return buffer
 
