@@ -773,20 +773,20 @@ with col2:
     - [Programa Nacional de Prevención y Detección Temprana de CCR](https://www.argentina.gob.ar/salud/inc/prevencion/cancer-colorrectal)
     """)
 
-st.caption("© 2025 - Desarrollado para el Instituto Nacional del Cáncer de Argentina")
-                st.markdown("---")
-                st.markdown(f"📋 **Resumen final:** {summary}")
-                
-                # Option to download PDF
-                st.subheader("Guardar resultados")
-                pdf_buffer = generate_pdf(age, bmi, summary, risk_category, recommendation, lifestyle_advice, any_symptoms)
-                st.download_button(
-                    label="Descargar resultados en PDF",
-                    data=pdf_buffer,
-                    file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
-                    mime="application/pdf",
-                    help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
-                )
+st.caption("© 2025 – Desarrollado para el Instituto Nacional del Cáncer de Argentina")
+st.markdown("---")
+st.markdown(f"📋 **Resumen final:** {summary}")
+
+# Opción para descargar PDF
+st.subheader("Guardar resultados")
+pdf_buffer = generate_pdf(age, bmi, summary, risk_category, recommendation, lifestyle_advice, any_symptoms)
+st.download_button(
+    label="Descargar resultados en PDF",
+    data=pdf_buffer,
+    file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
+    mime="application/pdf",
+    help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
+)
                 
                 # Save assessment to file option
                 st.markdown("---")
