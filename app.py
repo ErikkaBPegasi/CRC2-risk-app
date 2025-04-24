@@ -1,84 +1,22 @@
+import streamlit as st
+import pandas as pd
+from datetime import datetime
+from io import BytesIO
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-import streamlit as st
-import pandas as pd
-from datetime import datetime
-from io import BytesIO
-from fpdf import FPDF
 import json
 
+# Session state initialization
 if 'current_tab' not in st.session_state:
     st.session_state.current_tab = 0  # Start with the first tab
 
 # Define a function to change tabs
 def navigate_to_tab(tab_index):
     st.session_state.current_tab = tab_index
-
-# Replace your current tabs creation with this:
-tab_titles = ["Datos Personales", "Antecedentes", "Historia de Pólipos", "Síntomas", "Evaluación"]
-tabs = st.tabs(tab_titles)
-
-# Now use the tabs with the session state
-with tabs[st.session_state.current_tab]:
-    if st.session_state.current_tab == 0:  # Datos Personales tab
-        st.subheader("Datos personales básicos")
-        
-        # ... existing code for tab1 ...
-        
-        # Add a next button at the bottom of this tab
-        if dob and valid_height and valid_weight:
-            if st.button("Continuar a Antecedentes →"):
-                navigate_to_tab(1)
-        else:
-            st.info("Complete todos los campos para continuar")
-            
-    elif st.session_state.current_tab == 1:  # Antecedentes tab
-        st.subheader("Antecedentes de salud")
-        
-        # ... existing code for tab2 ...
-        
-        # Add navigation buttons
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("← Volver a Datos Personales"):
-                navigate_to_tab(0)
-        with col2:
-            if st.button("Continuar a Historia de Pólipos →"):
-                navigate_to_tab(2)
-                
-    elif st.session_state.current_tab == 2:  # Historia de Pólipos tab
-        # ... existing code for tab3 ...
-        
-        # Add navigation buttons
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("← Volver a Antecedentes"):
-                navigate_to_tab(1)
-        with col2:
-            if st.button("Continuar a Síntomas →"):
-                navigate_to_tab(3)
-                
-    elif st.session_state.current_tab == 3:  # Síntomas tab
-        # ... existing code for tab4 ...
-        
-        # Add navigation buttons
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("← Volver a Historia de Pólipos"):
-                navigate_to_tab(2)
-        with col2:
-            if st.button("Continuar a Evaluación →"):
-                navigate_to_tab(4)
-                
-    elif st.session_state.current_tab == 4:  # Evaluación tab
-        # ... existing code for tab5 ...
-        
-        # Add a back button only
-        if st.button("← Volver a Síntomas"):
-            navigate_to_tab(3)
+    st.experimental_rerun()
 
 # Set page configuration
 st.set_page_config(
@@ -89,13 +27,10 @@ st.set_page_config(
 )
 
 # Helper functions
-
-
 def calculate_age(dob):
     """Calculate age from date of birth"""
     today = datetime.today()
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-
 
 def calculate_bmi(height_cm, weight_kg):
     """Calculate Body Mass Index"""
@@ -103,7 +38,6 @@ def calculate_bmi(height_cm, weight_kg):
         return None
     height_m = height_cm / 100
     return round(weight_kg / (height_m ** 2), 1)
-
 
 def validate_numeric_input(value, min_val=0, max_val=None):
     """Validate numeric input within specified range"""
@@ -116,7 +50,6 @@ def validate_numeric_input(value, min_val=0, max_val=None):
         return True, val
     except:
         return False, "Please enter a valid number"
-
 
 def generate_pdf(edad, imc, resumen, categoria_riesgo, recomendacion, lifestyle_advice=None, symptoms_flag=False):
     """Generate PDF with assessment results and educational content using ReportLab"""
@@ -241,13 +174,24 @@ def generate_pdf(edad, imc, resumen, categoria_riesgo, recomendacion, lifestyle_
     # Add lifestyle advice if provided
     if lifestyle_advice:
         elements.append(Paragraph("Recomendaciones para Reducir el Riesgo", heading_style))
-        elements.append(Paragraph(lifestyle_advice, normal_style))
+        # Replace bullet points with proper formatting
+        clean_lifestyle = lifestyle_advice.replace('• ', '')
+        paragraphs = clean_lifestyle.split('\n')
+        for p in paragraphs:
+            if p.strip():
+                elements.append(Paragraph(p, normal_style))
     
     # Add information about screening intervals
     elements.append(Paragraph("Información sobre Métodos de Tamizaje", heading_style))
     elements.append(Paragraph(
-        "• Test de sangre oculta inmunoquímico (TSOMFi): Detecta sangre en las heces que podría indicar pólipos o cáncer. Es simple y no invasivo.<br/>"
-        "• Colonoscopía: Examen visual directo del colon completo, permite la detección y extirpación de pólipos durante el procedimiento.<br/>"
+        "• Test de sangre oculta inmunoquímico (TSOMFi): Detecta sangre en las heces que podría indicar pólipos o cáncer. Es simple y no invasivo.",
+        normal_style
+    ))
+    elements.append(Paragraph(
+        "• Colonoscopía: Examen visual directo del colon completo, permite la detección y extirpación de pólipos durante el procedimiento.",
+        normal_style
+    ))
+    elements.append(Paragraph(
         "• Rectosigmoidoscopía: Examina el tercio inferior del colon y es menos invasiva que la colonoscopía completa.",
         normal_style
     ))
@@ -269,7 +213,6 @@ def generate_pdf(edad, imc, resumen, categoria_riesgo, recomendacion, lifestyle_
     doc.build(elements)
     buffer.seek(0)
     return buffer
-
 
 def evaluate_serrated_polyps(polyp_history):
     """
@@ -300,7 +243,6 @@ def evaluate_serrated_polyps(polyp_history):
         serrated_risk["recommendation"] = "Colonoscopia cada 3–5 años + evaluación genética."
 
     return serrated_risk
-
 
 def get_lifestyle_recommendations(bmi, age):
     """
@@ -337,7 +279,6 @@ def get_lifestyle_recommendations(bmi, age):
 
     return "Las siguientes recomendaciones pueden ayudar a reducir tu riesgo de cáncer colorrectal:\n\n" + "\n".join(recommendations)
 
-
 def get_symptoms_detail():
     """
     Return detailed information about warning symptoms
@@ -356,7 +297,6 @@ def get_symptoms_detail():
     
     Estos síntomas pueden estar relacionados con varias condiciones, incluyendo el cáncer colorrectal, por lo que es importante una evaluación médica oportuna.
     """
-
 
 def evaluate_risk(age, bmi, personal_history, family_history, polyp_history, symptoms):
     """
@@ -488,12 +428,22 @@ def evaluate_risk(age, bmi, personal_history, family_history, polyp_history, sym
 
     return risk_category, recommendation, summary, lifestyle_advice, symptoms_detail, bmi_note, symptoms_warning
 
-
 # App layout
 st.title("Evaluación de riesgo para tamizaje de cáncer colorrectal")
 st.markdown(
     "Herramienta para pacientes: responde tus datos para obtener tu estrategia de tamizaje según la Guía Argentina del Instituto Nacional del Cáncer."
 )
+
+# Progress indicator
+progress_value = (st.session_state.current_tab) / 4  # 5 tabs (0-4)
+st.progress(progress_value)
+
+# Define tab titles
+tab_titles = ["Datos Personales", "Antecedentes", "Historia de Pólipos", "Síntomas", "Evaluación"]
+st.write(f"Paso {st.session_state.current_tab + 1} de 5: **{tab_titles[st.session_state.current_tab]}**")
+
+# Create tabs
+tabs = st.tabs(tab_titles)
 
 # Sidebar with educational content
 with st.sidebar:
@@ -545,402 +495,497 @@ with st.sidebar:
     st.markdown("---")
     st.caption("Esta herramienta está basada en la guía \"Recomendaciones para el tamizaje de CCR en población de riesgo promedio en Argentina\" del Instituto Nacional del Cáncer.")
 
-# Create tabs for the form
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Datos Personales", "Antecedentes", "Historia de Pólipos", "Síntomas", "Evaluación"])
+# Tabs content with navigation
+with tabs[st.session_state.current_tab]:
+    if st.session_state.current_tab == 0:  # Datos Personales tab
+        st.subheader("Datos personales básicos")
 
-with tab1:
-    st.subheader("Datos personales básicos")
-
-    # Date of birth with improved validation
-    dob = st.date_input(
-        "Fecha de nacimiento",
-        value=None,
-        min_value=datetime(1900, 1, 1),
-        max_value=datetime.today(),
-        help="Selecciona tu fecha de nacimiento para calcular tu edad"
-    )
-
-    # Current age (calculated from DOB)
-    if dob:
-        current_age = calculate_age(dob)
-        st.info(f"Edad actual: {current_age} años")
-
-    # Height and weight for BMI calculation with improved layout
-    col1, col2 = st.columns(2)
-    with col1:
-        height_str = st.text_input(
-            "Altura (cm)", placeholder="Ej: 170", help="Mide tu altura sin zapatos")
-    with col2:
-        weight_str = st.text_input(
-            "Peso (kg)", placeholder="Ej: 65", help="Ingresa tu peso actual")
-
-    # Add explanatory text about BMI
-    if height_str and weight_str:
-        try:
-            height_cm = float(height_str)
-            weight_kg = float(weight_str)
-            if height_cm > 0 and weight_kg > 0:
-                calculated_bmi = calculate_bmi(height_cm, weight_kg)
-
-                # Display BMI with color-coded category
-                if calculated_bmi < 18.5:
-                    st.warning(
-                        f"Tu IMC es: {calculated_bmi} kg/m² (Bajo peso)")
-                elif calculated_bmi < 25:
-                    st.success(
-                        f"Tu IMC es: {calculated_bmi} kg/m² (Peso normal)")
-                elif calculated_bmi < 30:
-                    st.warning(
-                        f"Tu IMC es: {calculated_bmi} kg/m² (Sobrepeso)")
-                else:
-                    st.error(f"Tu IMC es: {calculated_bmi} kg/m² (Obesidad)")
-
-                # Add explanation about BMI and cancer risk
-                if calculated_bmi >= 25:
-                    st.info(
-                        "El sobrepeso y la obesidad son factores de riesgo para el cáncer colorrectal. Mantener un IMC entre 18.5 y 24.9 puede reducir este riesgo.")
-        except:
-            st.error(
-                "Por favor ingresa valores numéricos válidos para altura y peso.")
-
-with tab2:
-    st.subheader("Antecedentes de salud")
-
-    # 1. Personal health history with additional explanations
-    st.markdown("**1. Antecedentes personales de salud**")
-
-    with st.expander("¿Qué son estos síndromes y condiciones?", expanded=False):
-        st.markdown("""
-        - **Enfermedad inflamatoria intestinal**: Incluye la colitis ulcerosa y la enfermedad de Crohn. Son condiciones crónicas que causan inflamación en el tracto digestivo.
-        - **Síndrome de Lynch**: También conocido como cáncer colorrectal hereditario no asociado a poliposis (HNPCC). Es un trastorno hereditario que aumenta el riesgo de cáncer colorrectal y otros tipos de cáncer.
-        - **Síndromes de pólipos hereditarios**: Incluyen Peutz-Jeghers, Cowden y otros. Son condiciones genéticas que provocan múltiples pólipos en el tracto digestivo.
-        - **Poliposis adenomatosa familiar (PAF)**: Condición hereditaria que causa cientos o miles de pólipos en el revestimiento del colon y recto.
-        - **Poliposis serrada**: Condición caracterizada por múltiples pólipos serrados en el colon, que tienen un riesgo elevado de transformación maligna.
-        """)
-
-    ibd = st.toggle("¿Tenés enfermedad intestinal inflamatoria como Crohn o colitis ulcerosa?", value=False,
-                    help="Las enfermedades inflamatorias intestinales aumentan el riesgo de CCR, especialmente cuando son de larga evolución")
-
-    hered = st.toggle("¿Algún médico te dijo que tenés un síndrome hereditario como el de Lynch?", value=False,
-                      help="El síndrome de Lynch aumenta significativamente el riesgo de CCR y requiere vigilancia intensiva")
-
-    hamart = st.toggle("¿Te diagnosticaron un síndrome de pólipos hereditarios como Peutz-Jeghers o Cowden?", value=False,
-                       help="Estos síndromes raros tienen un riesgo elevado de CCR y otros cánceres")
-
-    fap = st.toggle("¿Tenés diagnóstico de poliposis adenomatosa familiar (PAF)?", value=False,
-                    help="La PAF causa cientos o miles de pólipos y tiene un riesgo casi 100% de desarrollar CCR sin tratamiento")
-
-    fasha = st.toggle("¿Tenés diagnóstico de poliposis adenomatosa familiar atenuada (PAFA)?", value=False,
-                      help="Forma menos severa de PAF, pero con riesgo elevado de CCR")
-
-    serrated_synd = st.toggle("¿Te diagnosticaron síndrome de poliposis serrada (múltiples pólipos serrados)?", value=False,
-                              help="Los pólipos serrados tienen un riesgo elevado de transformación maligna por una vía molecular distinta")
-
-    # 2. Family history with additional explanations
-    st.markdown("**2. Antecedentes familiares**")
-
-    with st.expander("¿Por qué es importante la historia familiar?", expanded=False):
-        st.markdown("""
-        La presencia de CCR en familiares de primer grado (padres, hermanos, hijos) aumenta tu riesgo personal.
-        
-        El riesgo es mayor si:
-        - Hay múltiples familiares afectados
-        - El familiar fue diagnosticado antes de los 60 años
-        - El familiar tuvo múltiples cánceres relacionados
-        
-        Según las guías argentinas, los antecedentes familiares modifican la edad de inicio y la frecuencia del tamizaje.
-        """)
-
-    family_crc = st.toggle("¿Tenés un familiar directo (padre/madre/hermano/a/hijo/a) con cáncer colorrectal?", value=False,
-                           help="Los familiares de primer grado son padres, hermanos e hijos")
-
-    family_before_60 = False
-    family_multiple = False
-
-    if family_crc:
-        family_before_60 = st.toggle("¿Ese familiar fue diagnosticado antes de los 60 años?", value=False,
-                                     help="El diagnóstico temprano en familiares indica mayor riesgo genético")
-
-        family_multiple = st.toggle("¿Tenés más de un familiar directo con cáncer colorrectal?", value=False,
-                                    help="Múltiples familiares afectados aumentan significativamente el riesgo")
-
-with tab3:
-    # 3. Polyp history with enhanced information
-    st.subheader("Historial de pólipos")
-
-    with st.expander("¿Qué son los pólipos y por qué son importantes?", expanded=False):
-        st.markdown("""
-        Los pólipos son crecimientos anormales en el revestimiento del colon o recto. Aunque la mayoría son benignos, algunos pueden convertirse en cáncer con el tiempo.
-        
-        **Tipos de pólipos de mayor riesgo:**
-        - Adenomas avanzados (>1cm, componente velloso, displasia de alto grado)
-        - Pólipos serrados (especialmente los sésiles)
-        - Múltiples pólipos (más de 3)
-        
-        La detección y extirpación de pólipos mediante colonoscopia es una forma efectiva de prevenir el cáncer colorrectal.
-        """)
-
-    polyp10 = st.toggle("Durante los últimos 10 años, ¿algún médico te dijo que tenías pólipos en el colon o el recto?", value=False,
-                        help="La presencia de pólipos previos es un factor de riesgo para nuevos pólipos y CCR")
-
-    advanced_poly = False
-    serrated = False
-    resected = False
-    multiple_polyps = False
-    polyp_size = None
-
-    if polyp10:
-        advanced_poly = st.toggle("¿Alguno de esos pólipos fue grande (más de 1 cm) o de alto riesgo?", value=False,
-                                  help="Los pólipos grandes tienen mayor riesgo de transformación maligna")
-
-        serrated = st.toggle("¿Alguno de los pólipos era del tipo serrado?", value=False,
-                             help="Los pólipos serrados siguen una vía diferente de carcinogénesis")
-
-        multiple_polyps = st.toggle("¿Tenías más de 3 pólipos en total?", value=False,
-                                    help="El número de pólipos influye en el riesgo y el intervalo de vigilancia")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            polyp_options = ["No lo sé",
-                             "Menos de 5mm", "5-10mm", "Más de 10mm"]
-            polyp_size = st.selectbox("¿Cuál era el tamaño del pólipo más grande?", polyp_options,
-                                      help="El tamaño del pólipo es un factor importante para determinar el riesgo")
-
-        with col2:
-            resected = st.toggle("¿Te realizaron una resección o extirpación de esos pólipos o adenomas?", value=False,
-                                 help="La extirpación de pólipos reduce el riesgo pero requiere seguimiento")
-
-with tab4:
-    # Symptoms (detailed section)
-    st.subheader("Síntomas actuales")
-
-    with st.expander("Acerca de los síntomas digestivos", expanded=True):
-        st.markdown("""
-        La presencia de síntomas requiere evaluación diagnóstica, no tamizaje. El tamizaje está diseñado para personas asintomáticas.
-        
-        Los síntomas que requieren evaluación médica incluyen:
-        - Sangrado rectal
-        - Cambios en los hábitos intestinales que persisten (diarrea, estreñimiento)
-        - Dolor abdominal recurrente
-        - Pérdida de peso involuntaria
-        - Sensación de evacuación incompleta
-        - Anemia inexplicada
-        
-        Estos síntomas pueden tener muchas causas, pero deben ser evaluados por un médico para descartar cáncer colorrectal.
-        """)
-
-    # More specific symptom questions
-    symptoms = {}
-    symptoms["blood"] = st.toggle(
-        "¿Has notado sangre en las heces o en el papel higiénico en el último mes?", value=False)
-    symptoms["bowel_changes"] = st.toggle(
-        "¿Has experimentado cambios persistentes en tus hábitos intestinales (diarrea, estreñimiento) por más de 3 semanas?", value=False)
-    symptoms["weight_loss"] = st.toggle(
-        "¿Has perdido peso sin explicación (sin dieta o ejercicio) en los últimos 3 meses?", value=False)
-    symptoms["pain"] = st.toggle(
-        "¿Tienes dolor abdominal recurrente o persistente?", value=False)
-    symptoms["incomplete"] = st.toggle(
-        "¿Sientes con frecuencia que no has evacuado completamente después de ir al baño?", value=False)
-
-    # Calculate if any symptoms are present
-    any_symptoms = any(symptoms.values())
-
-    if any_symptoms:
-        st.warning(
-            "⚠️ Has indicado la presencia de síntomas que requieren evaluación médica. Consulta con un médico lo antes posible.")
-
-with tab5:
-    st.subheader("Evaluación de riesgo")
-
-    # Parse numeric inputs
-    age = None
-    bmi = None
-    height_cm = None
-    weight_kg = None
-
-    valid_height = False
-    valid_weight = False
-
-    if height_str:
-        valid_height, result = validate_numeric_input(height_str, 50, 250)
-        if valid_height:
-            height_cm = result
-        else:
-            st.error(result)
-
-    if weight_str:
-        valid_weight, result = validate_numeric_input(weight_str, 20, 300)
-        if valid_weight:
-            weight_kg = result
-        else:
-            st.error(result)
-
-    # Check if we have all required data
-    can_evaluate = dob and valid_height and valid_weight
-
-    if can_evaluate:
-        age = calculate_age(dob)
-        bmi = calculate_bmi(height_cm, weight_kg)
-        st.markdown(f"**Edad:** {age} años | **IMC:** {bmi} kg/m²")
-
-        # Collect risk factors
-        personal_history = {
-            "ibd": ibd,
-            "lynch": hered,
-            "hamart": hamart,
-            "fap": fap,
-            "fasha": fasha,
-            "serrated_synd": serrated_synd
-        }
-
-        family_history = {
-            "family_crc": family_crc,
-            "family_before_60": family_before_60,
-            "family_multiple": family_multiple
-        }
-
-        polyp_history = {
-            "polyp10": polyp10,
-            "advanced_poly": advanced_poly,
-            "serrated": serrated,
-            "resected": resected,
-            "multiple_polyps": multiple_polyps,
-            "polyp_size": polyp_size
-        }
-
- # Button to evaluate risk
-if st.button("Evaluar riesgo", type="primary"):
-    try:
-        st.markdown("---")
-        st.subheader("Estrategia de tamizaje recomendada")
-
-        # Get comprehensive risk assessment
-        risk_category, recommendation, summary, lifestyle_advice, symptoms_detail, bmi_note, symptoms_warning = evaluate_risk(
-            age, bmi, personal_history, family_history, polyp_history, any_symptoms
+        # Date of birth with improved validation
+        dob = st.date_input(
+            "Fecha de nacimiento",
+            value=None,
+            min_value=datetime(1900, 1, 1),
+            max_value=datetime.today(),
+            help="Selecciona tu fecha de nacimiento para calcular tu edad"
         )
 
-        # Display risk category with appropriate styling
-        if "Alto" in risk_category:
-            st.error(f"**{risk_category}**")
-        elif "Incrementado" in risk_category or "Intermedio" in risk_category:
-            st.info(f"**{risk_category}**")
+        # Current age (calculated from DOB)
+        current_age = None
+        if dob:
+            current_age = calculate_age(dob)
+            st.info(f"Edad actual: {current_age} años")
+            # Store in session state
+            st.session_state.dob = dob
+            st.session_state.age = current_age
+
+        # Height and weight for BMI calculation with improved layout
+        col1, col2 = st.columns(2)
+        with col1:
+            height_str = st.text_input(
+                "Altura (cm)", placeholder="Ej: 170", help="Mide tu altura sin zapatos")
+        with col2:
+            weight_str = st.text_input(
+                "Peso (kg)", placeholder="Ej: 65", help="Ingresa tu peso actual")
+
+        # Add explanatory text about BMI
+        valid_height = False
+        valid_weight = False
+        height_cm = None
+        weight_kg = None
+        calculated_bmi = None
+
+        if height_str:
+            valid_height, result = validate_numeric_input(height_str, 50, 250)
+            if valid_height:
+                height_cm = result
+                # Store in session state
+                st.session_state.height_cm = height_cm
+            else:
+                st.error(result)
+
+        if weight_str:
+            valid_weight, result = validate_numeric_input(weight_str, 20, 300)
+            if valid_weight:
+                weight_kg = result
+                # Store in session state
+                st.session_state.weight_kg = weight_kg
+            else:
+                st.error(result)
+
+        if valid_height and valid_weight:
+            calculated_bmi = calculate_bmi(height_cm, weight_kg)
+            # Store in session state
+            st.session_state.bmi = calculated_bmi
+            
+            # Display BMI with color-coded category
+            if calculated_bmi < 18.5:
+                st.warning(f"Tu IMC es: {calculated_bmi} kg/m² (Bajo peso)")
+            elif calculated_bmi < 25:
+                st.success(f"Tu IMC es: {calculated_bmi} kg/m² (Peso normal)")
+            elif calculated_bmi < 30:
+                st.warning(f"Tu IMC es: {calculated_bmi} kg/m² (Sobrepeso)")
+            else:
+                st.error(f"Tu IMC es: {calculated_bmi} kg/m² (Obesidad)")
+
+            # Add explanation about BMI and cancer risk
+            if calculated_bmi >= 25:
+                st.info("El sobrepeso y la obesidad son factores de riesgo para el cáncer colorrectal. Mantener un IMC entre 18.5 y 24.9 puede reducir este riesgo.")
+        
+        # Navigation button
+        st.markdown("---")
+        if dob and valid_height and valid_weight:
+            if st.button("Continuar a Antecedentes →", type="primary"):
+                navigate_to_tab(1)
         else:
-            st.success(f"**{risk_category}**")
+            st.warning("Complete todos los campos obligatorios para continuar")
 
-        # Display recommendation
-        st.markdown(recommendation)
+    elif st.session_state.current_tab == 1:  # Antecedentes tab
+        st.subheader("Antecedentes de salud")
 
-        # Display BMI note if applicable
-        if bmi_note:
-            st.markdown(bmi_note)
+        # 1. Personal health history with additional explanations
+        st.markdown("**1. Antecedentes personales de salud**")
 
-        # Display symptoms warning if applicable
+        with st.expander("¿Qué son estos síndromes y condiciones?", expanded=False):
+            st.markdown("""
+            - **Enfermedad inflamatoria intestinal**: Incluye la colitis ulcerosa y la enfermedad de Crohn. Son condiciones crónicas que causan inflamación en el tracto digestivo.
+            - **Síndrome de Lynch**: También conocido como cáncer colorrectal hereditario no asociado a poliposis (HNPCC). Es un trastorno hereditario que aumenta el riesgo de cáncer colorrectal y otros tipos de cáncer.
+            - **Síndromes de pólipos hereditarios**: Incluyen Peutz-Jeghers, Cowden y otros. Son condiciones genéticas que provocan múltiples pólipos en el tracto digestivo.
+            - **Poliposis adenomatosa familiar (PAF)**: Condición hereditaria que causa cientos o miles de pólipos en el revestimiento del colon y recto.
+            - **Poliposis serrada**: Condición caracterizada por múltiples pólipos serrados en el colon, que tienen un riesgo elevado de transformación maligna.
+            """)
+
+        ibd = st.toggle("¿Tenés enfermedad intestinal inflamatoria como Crohn o colitis ulcerosa?", value=False,
+                       help="Las enfermedades inflamatorias intestinales aumentan el riesgo de CCR, especialmente cuando son de larga evolución")
+
+        hered = st.toggle("¿Algún médico te dijo que tenés un síndrome hereditario como el de Lynch?", value=False,
+                         help="El síndrome de Lynch aumenta significativamente el riesgo de CCR y requiere vigilancia intensiva")
+
+        hamart = st.toggle("¿Te diagnosticaron un síndrome de pólipos hereditarios como Peutz-Jeghers o Cowden?", value=False,
+                          help="Estos síndromes raros tienen un riesgo elevado de CCR y otros cánceres")
+
+        fap = st.toggle("¿Tenés diagnóstico de poliposis adenomatosa familiar (PAF)?", value=False,
+                       help="La PAF causa cientos o miles de pólipos y tiene un riesgo casi 100% de desarrollar CCR sin tratamiento")
+
+        fasha = st.toggle("¿Tenés diagnóstico de poliposis adenomatosa familiar atenuada (PAFA)?", value=False,
+                         help="Forma menos severa de PAF, pero con riesgo elevado de CCR")
+        serrated_synd = st.toggle("¿Te diagnosticaron síndrome de poliposis serrada (múltiples pólipos serrados)?", value=False,
+                                 help="Los pólipos serrados tienen un riesgo elevado de transformación maligna por una vía molecular distinta")
+
+        # Save to session state
+        st.session_state.ibd = ibd
+        st.session_state.hered = hered
+        st.session_state.hamart = hamart
+        st.session_state.fap = fap
+        st.session_state.fasha = fasha
+        st.session_state.serrated_synd = serrated_synd
+
+        # 2. Family history with additional explanations
+        st.markdown("**2. Antecedentes familiares**")
+
+        with st.expander("¿Por qué es importante la historia familiar?", expanded=False):
+            st.markdown("""
+            La presencia de CCR en familiares de primer grado (padres, hermanos, hijos) aumenta tu riesgo personal.
+            
+            El riesgo es mayor si:
+            - Hay múltiples familiares afectados
+            - El familiar fue diagnosticado antes de los 60 años
+            - El familiar tuvo múltiples cánceres relacionados
+            
+            Según las guías argentinas, los antecedentes familiares modifican la edad de inicio y la frecuencia del tamizaje.
+            """)
+
+        family_crc = st.toggle("¿Tenés un familiar directo (padre/madre/hermano/a/hijo/a) con cáncer colorrectal?", value=False,
+                              help="Los familiares de primer grado son padres, hermanos e hijos")
+
+        family_before_60 = False
+        family_multiple = False
+
+        if family_crc:
+            family_before_60 = st.toggle("¿Ese familiar fue diagnosticado antes de los 60 años?", value=False,
+                                        help="El diagnóstico temprano en familiares indica mayor riesgo genético")
+
+            family_multiple = st.toggle("¿Tenés más de un familiar directo con cáncer colorrectal?", value=False,
+                                       help="Múltiples familiares afectados aumentan significativamente el riesgo")
+        
+        # Save to session state
+        st.session_state.family_crc = family_crc
+        st.session_state.family_before_60 = family_before_60
+        st.session_state.family_multiple = family_multiple
+
+        # Navigation buttons
+        st.markdown("---")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("← Volver a Datos Personales"):
+                navigate_to_tab(0)
+        with col2:
+            if st.button("Continuar a Historia de Pólipos →", type="primary"):
+                navigate_to_tab(2)
+
+    elif st.session_state.current_tab == 2:  # Historia de Pólipos tab
+        # 3. Polyp history with enhanced information
+        st.subheader("Historial de pólipos")
+
+        with st.expander("¿Qué son los pólipos y por qué son importantes?", expanded=False):
+            st.markdown("""
+            Los pólipos son crecimientos anormales en el revestimiento del colon o recto. Aunque la mayoría son benignos, algunos pueden convertirse en cáncer con el tiempo.
+            
+            **Tipos de pólipos de mayor riesgo:**
+            - Adenomas avanzados (>1cm, componente velloso, displasia de alto grado)
+            - Pólipos serrados (especialmente los sésiles)
+            - Múltiples pólipos (más de 3)
+            
+            La detección y extirpación de pólipos mediante colonoscopia es una forma efectiva de prevenir el cáncer colorrectal.
+            """)
+
+        polyp10 = st.toggle("Durante los últimos 10 años, ¿algún médico te dijo que tenías pólipos en el colon o el recto?", value=False,
+                           help="La presencia de pólipos previos es un factor de riesgo para nuevos pólipos y CCR")
+
+        advanced_poly = False
+        serrated = False
+        resected = False
+        multiple_polyps = False
+        polyp_size = None
+
+        if polyp10:
+            advanced_poly = st.toggle("¿Alguno de esos pólipos fue grande (más de 1 cm) o de alto riesgo?", value=False,
+                                     help="Los pólipos grandes tienen mayor riesgo de transformación maligna")
+
+            serrated = st.toggle("¿Alguno de los pólipos era del tipo serrado?", value=False,
+                                help="Los pólipos serrados siguen una vía diferente de carcinogénesis")
+
+            multiple_polyps = st.toggle("¿Tenías más de 3 pólipos en total?", value=False,
+                                       help="El número de pólipos influye en el riesgo y el intervalo de vigilancia")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                polyp_options = ["No lo sé",
+                                "Menos de 5mm", "5-10mm", "Más de 10mm"]
+                polyp_size = st.selectbox("¿Cuál era el tamaño del pólipo más grande?", polyp_options,
+                                         help="El tamaño del pólipo es un factor importante para determinar el riesgo")
+
+            with col2:
+                resected = st.toggle("¿Te realizaron una resección o extirpación de esos pólipos o adenomas?", value=False,
+                                    help="La extirpación de pólipos reduce el riesgo pero requiere seguimiento")
+        
+        # Save to session state
+        st.session_state.polyp10 = polyp10
+        st.session_state.advanced_poly = advanced_poly
+        st.session_state.serrated = serrated
+        st.session_state.multiple_polyps = multiple_polyps
+        st.session_state.polyp_size = polyp_size
+        st.session_state.resected = resected
+
+        # Navigation buttons
+        st.markdown("---")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("← Volver a Antecedentes"):
+                navigate_to_tab(1)
+        with col2:
+            if st.button("Continuar a Síntomas →", type="primary"):
+                navigate_to_tab(3)
+
+    elif st.session_state.current_tab == 3:  # Síntomas tab
+        # Symptoms (detailed section)
+        st.subheader("Síntomas actuales")
+
+        with st.expander("Acerca de los síntomas digestivos", expanded=True):
+            st.markdown("""
+            La presencia de síntomas requiere evaluación diagnóstica, no tamizaje. El tamizaje está diseñado para personas asintomáticas.
+            
+            Los síntomas que requieren evaluación médica incluyen:
+            - Sangrado rectal
+            - Cambios en los hábitos intestinales que persisten (diarrea, estreñimiento)
+            - Dolor abdominal recurrente
+            - Pérdida de peso involuntaria
+            - Sensación de evacuación incompleta
+            - Anemia inexplicada
+            
+            Estos síntomas pueden tener muchas causas, pero deben ser evaluados por un médico para descartar cáncer colorrectal.
+            """)
+
+        # More specific symptom questions
+        symptoms = {}
+        symptoms["blood"] = st.toggle(
+            "¿Has notado sangre en las heces o en el papel higiénico en el último mes?", value=False)
+        symptoms["bowel_changes"] = st.toggle(
+            "¿Has experimentado cambios persistentes en tus hábitos intestinales (diarrea, estreñimiento) por más de 3 semanas?", value=False)
+        symptoms["weight_loss"] = st.toggle(
+            "¿Has perdido peso sin explicación (sin dieta o ejercicio) en los últimos 3 meses?", value=False)
+        symptoms["pain"] = st.toggle(
+            "¿Tienes dolor abdominal recurrente o persistente?", value=False)
+        symptoms["incomplete"] = st.toggle(
+            "¿Sientes con frecuencia que no has evacuado completamente después de ir al baño?", value=False)
+
+        # Calculate if any symptoms are present
+        any_symptoms = any(symptoms.values())
+        
+        # Save to session state
+        st.session_state.symptoms = symptoms
+        st.session_state.any_symptoms = any_symptoms
+
         if any_symptoms:
-            st.error(symptoms_warning)
-            st.markdown(symptoms_detail)
+            st.warning(
+                "⚠️ Has indicado la presencia de síntomas que requieren evaluación médica. Consulta con un médico lo antes posible.")
 
-        # Display timeline visualization for screening intervals
-        st.subheader("Cronograma de tamizaje recomendado")
-
-        # Create a basic timeline based on risk category
-        current_year = datetime.now().year
-
-        if "Alto" in risk_category:
-            if "Lynch" in risk_category or "Poliposis" in risk_category:
-                interval = 1
-                timeline_years = 10
-            else:
-                interval = 3
-                timeline_years = 12
-        elif "Incrementado" in risk_category or "Intermedio" in risk_category:
-            interval = 5
-            timeline_years = 15
-        else:
-            if 50 <= age <= 75:
-                interval = 2  # For TSOMFi
-                timeline_years = 10
-            else:
-                interval = None
-                timeline_years = 0
-
-        if interval:
-            years = [
-                current_year + i*interval for i in range(int(timeline_years/interval) + 1)]
-            timeline_data = pd.DataFrame({
-                'Año': years,
-                'Tamizaje': [f"Tamizaje #{i+1}" for i in range(len(years))]
-            })
-
-            st.dataframe(timeline_data, hide_index=True)
-        else:
-            if age < 50:
-                st.info("No se recomienda tamizaje de rutina antes de los 50 años para personas de riesgo promedio. Consulta con tu médico cuando cumplas 50 años o si desarrollas síntomas.")
-            elif age > 75:
-                st.info("El tamizaje de rutina no está recomendado después de los 75 años. Tu médico evaluará individualmente la necesidad de continuar el tamizaje basado en tu estado de salud general y expectativa de vida.")
-
-        # Display lifestyle recommendations
-        st.subheader("Recomendaciones para reducir el riesgo")
-        st.markdown(lifestyle_advice)
-
-        # Display summary
+        # Navigation buttons
         st.markdown("---")
-        st.markdown(f"### **Resumen final:** {summary}")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("← Volver a Historia de Pólipos"):
+                navigate_to_tab(2)
+        with col2:
+            if st.button("Continuar a Evaluación →", type="primary"):
+                navigate_to_tab(4)
 
-        # Option to download PDF
-        st.subheader("Guardar resultados")
+    elif st.session_state.current_tab == 4:  # Evaluación tab
+        st.subheader("Evaluación de riesgo")
 
-        # Ensure all variables needed for PDF generation exist and are properly formatted
-        try:
-            # Generate PDF with ReportLab - no need to sanitize text as ReportLab handles Unicode well
-            pdf_buffer = generate_pdf(
-                str(age) if age is not None else "No disponible",
-                str(bmi) if bmi is not None else "No disponible",
-                summary if summary is not None else "Consulta con tu médico para recomendaciones específicas.",
-                risk_category if risk_category is not None else "No categorizado",
-                recommendation if recommendation is not None else "Consulta con un profesional de la salud.",
-                lifestyle_advice if lifestyle_advice is not None else "Mantén un estilo de vida saludable.",
-                any_symptoms
-            )
+        # Get data from session state
+        age = None
+        bmi = None
+        height_cm = None
+        weight_kg = None
+        
+        if 'age' in st.session_state:
+            age = st.session_state.age
+        if 'bmi' in st.session_state:
+            bmi = st.session_state.bmi
+        if 'height_cm' in st.session_state:
+            height_cm = st.session_state.height_cm
+        if 'weight_kg' in st.session_state:
+            weight_kg = st.session_state.weight_kg
+            
+        # Get risk factors from session state
+        ibd = st.session_state.get('ibd', False)
+        hered = st.session_state.get('hered', False)
+        hamart = st.session_state.get('hamart', False)
+        fap = st.session_state.get('fap', False)
+        fasha = st.session_state.get('fasha', False)
+        serrated_synd = st.session_state.get('serrated_synd', False)
+        
+        family_crc = st.session_state.get('family_crc', False)
+        family_before_60 = st.session_state.get('family_before_60', False)
+        family_multiple = st.session_state.get('family_multiple', False)
+        
+        polyp10 = st.session_state.get('polyp10', False)
+        advanced_poly = st.session_state.get('advanced_poly', False)
+        serrated = st.session_state.get('serrated', False)
+        resected = st.session_state.get('resected', False)
+        multiple_polyps = st.session_state.get('multiple_polyps', False)
+        polyp_size = st.session_state.get('polyp_size', None)
+        
+        any_symptoms = st.session_state.get('any_symptoms', False)
 
-            st.download_button(
-                label="Descargar resultados en PDF",
-                data=pdf_buffer,
-                file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf",
-                help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
-            )
-        except Exception as e:
-            st.error(f"No se pudo generar el PDF. Error: {str(e)}")
+        # Check if we have all required data
+        can_evaluate = age is not None and bmi is not None
 
-        # Save assessment to file option
+        if can_evaluate:
+            st.markdown(f"**Edad:** {age} años | **IMC:** {bmi} kg/m²")
+
+            # Collect risk factors
+            personal_history = {
+                "ibd": ibd,
+                "lynch": hered,
+                "hamart": hamart,
+                "fap": fap,
+                "fasha": fasha,
+                "serrated_synd": serrated_synd
+            }
+
+            family_history = {
+                "family_crc": family_crc,
+                "family_before_60": family_before_60,
+                "family_multiple": family_multiple
+            }
+
+            polyp_history = {
+                "polyp10": polyp10,
+                "advanced_poly": advanced_poly,
+                "serrated": serrated,
+                "resected": resected,
+                "multiple_polyps": multiple_polyps,
+                "polyp_size": polyp_size
+            }
+
+            # Button to evaluate risk
+            if st.button("Evaluar riesgo", type="primary"):
+                try:
+                    st.markdown("---")
+                    st.subheader("Estrategia de tamizaje recomendada")
+
+                    # Get comprehensive risk assessment
+                    risk_category, recommendation, summary, lifestyle_advice, symptoms_detail, bmi_note, symptoms_warning = evaluate_risk(
+                        age, bmi, personal_history, family_history, polyp_history, any_symptoms
+                    )
+
+                    # Display risk category with appropriate styling
+                    if "Alto" in risk_category:
+                        st.error(f"**{risk_category}**")
+                    elif "Incrementado" in risk_category or "Intermedio" in risk_category:
+                        st.info(f"**{risk_category}**")
+                    else:
+                        st.success(f"**{risk_category}**")
+
+                    # Display recommendation
+                    st.markdown(recommendation)
+
+                    # Display BMI note if applicable
+                    if bmi_note:
+                        st.markdown(bmi_note)
+
+                    # Display symptoms warning if applicable
+                    if any_symptoms:
+                        st.error(symptoms_warning)
+                        st.markdown(symptoms_detail)
+
+                    # Display timeline visualization for screening intervals
+                    st.subheader("Cronograma de tamizaje recomendado")
+
+                    # Create a basic timeline based on risk category
+                    current_year = datetime.now().year
+
+                    if "Alto" in risk_category:
+                        if "Lynch" in risk_category or "Poliposis" in risk_category:
+                            interval = 1
+                            timeline_years = 10
+                        else:
+                            interval = 3
+                            timeline_years = 12
+                    elif "Incrementado" in risk_category or "Intermedio" in risk_category:
+                        interval = 5
+                        timeline_years = 15
+                    else:
+                        if 50 <= age <= 75:
+                            interval = 2  # For TSOMFi
+                            timeline_years = 10
+                        else:
+                            interval = None
+                            timeline_years = 0
+
+                    if interval:
+                        years = [
+                            current_year + i*interval for i in range(int(timeline_years/interval) + 1)]
+                        timeline_data = pd.DataFrame({
+                            'Año': years,
+                            'Tamizaje': [f"Tamizaje #{i+1}" for i in range(len(years))]
+                        })
+
+                        st.dataframe(timeline_data, hide_index=True)
+                    else:
+                        if age < 50:
+                            st.info("No se recomienda tamizaje de rutina antes de los 50 años para personas de riesgo promedio. Consulta con tu médico cuando cumplas 50 años o si desarrollas síntomas.")
+                        elif age > 75:
+                            st.info("El tamizaje de rutina no está recomendado después de los 75 años. Tu médico evaluará individualmente la necesidad de continuar el tamizaje basado en tu estado de salud general y expectativa de vida.")
+
+                    # Display lifestyle recommendations
+                    st.subheader("Recomendaciones para reducir el riesgo")
+                    st.markdown(lifestyle_advice)
+
+                    # Display summary
+                    st.markdown("---")
+                    st.markdown(f"### **Resumen final:** {summary}")
+
+                    # Option to download PDF
+                    st.subheader("Guardar resultados")
+
+                    # Ensure all variables needed for PDF generation exist and are properly formatted
+                    try:
+                        # Generate PDF with ReportLab - no need to sanitize text as ReportLab handles Unicode well
+                        pdf_buffer = generate_pdf(
+                            str(age) if age is not None else "No disponible",
+                            str(bmi) if bmi is not None else "No disponible",
+                            summary if summary is not None else "Consulta con tu médico para recomendaciones específicas.",
+                            risk_category if risk_category is not None else "No categorizado",
+                            recommendation if recommendation is not None else "Consulta con un profesional de la salud.",
+                            lifestyle_advice if lifestyle_advice is not None else "Mantén un estilo de vida saludable.",
+                            any_symptoms
+                        )
+
+                        st.download_button(
+                            label="Descargar resultados en PDF",
+                            data=pdf_buffer,
+                            file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
+                            mime="application/pdf",
+                            help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
+                        )
+                    except Exception as e:
+                        st.error(f"No se pudo generar el PDF. Error: {str(e)}")
+
+                    # Save assessment to file option
+                    st.markdown("---")
+                    save_data = {
+                        "fecha_evaluacion": datetime.now().strftime("%Y-%m-%d"),
+                        "edad": age,
+                        "imc": bmi,
+                        "categoria_riesgo": risk_category,
+                        "recomendacion": recommendation,
+                        "resumen": summary
+                    }
+
+                    try:
+                        st.download_button(
+                            label="Guardar datos en formato JSON",
+                            data=json.dumps(save_data, indent=4),
+                            file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.json",
+                            mime="application/json",
+                            help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
+                        )
+                    except Exception as e:
+                        st.error(f"No se pudo crear el archivo JSON. Error: {str(e)}")
+
+                except Exception as e:
+                    st.error(f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
+        else:
+            st.warning("Por favor completa todos los campos obligatorios en las pestañas anteriores para obtener tu evaluación de riesgo.")
+
+        # Navigation buttons
         st.markdown("---")
-        save_data = {
-            "fecha_evaluacion": datetime.now().strftime("%Y-%m-%d"),
-            "edad": age,
-            "imc": bmi,
-            "categoria_riesgo": risk_category,
-            "recomendacion": recommendation,
-            "resumen": summary
-        }
+        if st.button("← Volver a Síntomas"):
+            navigate_to_tab(3)
 
-        try:
-            st.download_button(
-                label="Guardar datos en formato JSON",
-                data=json.dumps(save_data, indent=4),
-                file_name=f"datos_evaluacion_ccr_{datetime.now().strftime('%Y%m%d')}.json",
-                mime="application/json",
-                help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
-            )
-        except Exception as e:
-            st.error(f"No se pudo crear el archivo JSON. Error: {str(e)}")
-
-    except Exception as e:
-        st.error(f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
-else:
-    st.warning("Por favor completa todos los campos obligatorios (fecha de nacimiento, altura y peso) para obtener tu evaluación de riesgo.")
-
-# Footer with disclaimer and links - keep this outside the tab5 section
+# Footer with disclaimer and links
 st.markdown("---")
 col1, col2 = st.columns([2, 1])
 
@@ -957,4 +1002,3 @@ with col2:
 
 # Add just one caption at the end
 st.caption("© 2025 - Desarrollado por PEGASI Chubut. Todos los derechos reservados.")
-
