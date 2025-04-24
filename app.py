@@ -833,4 +833,3 @@ with col2:
 st.caption(
     "© 2025 - Desarrollado por PEGASI Chubut. Todos los derechos reservados.")
 
-st.caption("© 2025 - Desarrollado para el Instituto Nacional del Cáncer de Argentina")
