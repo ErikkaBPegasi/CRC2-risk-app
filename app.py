@@ -652,38 +652,38 @@ with tab5:
     can_evaluate = dob and valid_height and valid_weight
 
     if can_evaluate:
-        try:
-            age = calculate_age(dob)
-            bmi = calculate_bmi(height_cm, weight_kg)
-            st.markdown(f"**Edad:** {age} años | **IMC:** {bmi} kg/m²")
+        age = calculate_age(dob)
+        bmi = calculate_bmi(height_cm, weight_kg)
+        st.markdown(f"**Edad:** {age} años | **IMC:** {bmi} kg/m²")
 
-            # Collect risk factors
-            personal_history = {
-                "ibd": ibd,
-                "lynch": hered,
-                "hamart": hamart,
-                "fap": fap,
-                "fasha": fasha,
-                "serrated_synd": serrated_synd
-            }
+        # Collect risk factors
+        personal_history = {
+            "ibd": ibd,
+            "lynch": hered,
+            "hamart": hamart,
+            "fap": fap,
+            "fasha": fasha,
+            "serrated_synd": serrated_synd
+        }
 
-            family_history = {
-                "family_crc": family_crc,
-                "family_before_60": family_before_60,
-                "family_multiple": family_multiple
-            }
+        family_history = {
+            "family_crc": family_crc,
+            "family_before_60": family_before_60,
+            "family_multiple": family_multiple
+        }
 
-            polyp_history = {
-                "polyp10": polyp10,
-                "advanced_poly": advanced_poly,
-                "serrated": serrated,
-                "resected": resected,
-                "multiple_polyps": multiple_polyps,
-                "polyp_size": polyp_size
-            }
+        polyp_history = {
+            "polyp10": polyp10,
+            "advanced_poly": advanced_poly,
+            "serrated": serrated,
+            "resected": resected,
+            "multiple_polyps": multiple_polyps,
+            "polyp_size": polyp_size
+        }
 
-            # Button to evaluate risk
-            if st.button("Evaluar riesgo", type="primary"):
+        # Button to evaluate risk
+        if st.button("Evaluar riesgo", type="primary"):
+            try:
                 st.markdown("---")
                 st.subheader("Estrategia de tamizaje recomendada")
 
@@ -757,19 +757,33 @@ with tab5:
 
                 # Display summary
                 st.markdown("---")
-                st.markdown(f"📋 **Resumen final:** {summary}")
+                st.markdown(f"### **Resumen final:** {summary}")
 
                 # Option to download PDF
                 st.subheader("Guardar resultados")
-                pdf_buffer = generate_pdf(
-                    age, bmi, summary, risk_category, recommendation, lifestyle_advice, any_symptoms)
-                st.download_button(
-                    label="Descargar resultados en PDF",
-                    data=pdf_buffer,
-                    file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
-                    mime="application/pdf",
-                    help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
-                )
+
+                # Ensure all variables needed for PDF generation exist and are properly formatted
+                try:
+                    # Generate PDF with proper error handling
+                    pdf_buffer = generate_pdf(
+                        str(age) if age is not None else "No disponible",
+                        str(bmi) if bmi is not None else "No disponible",
+                        summary if summary is not None else "Consulta con tu médico para recomendaciones específicas.",
+                        risk_category if risk_category is not None else "No categorizado",
+                        recommendation if recommendation is not None else "Consulta con un profesional de la salud.",
+                        lifestyle_advice if lifestyle_advice is not None else "Mantén un estilo de vida saludable.",
+                        any_symptoms
+                    )
+
+                    st.download_button(
+                        label="Descargar resultados en PDF",
+                        data=pdf_buffer,
+                        file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
+                        mime="application/pdf",
+                        help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
+                    )
+                except Exception as e:
+                    st.error(f"No se pudo generar el PDF. Error: {str(e)}")
 
                 # Save assessment to file option
                 st.markdown("---")
@@ -782,21 +796,26 @@ with tab5:
                     "resumen": summary
                 }
 
-                st.download_button(
-                    label="Guardar datos en formato JSON",
-                    data=json.dumps(save_data, indent=4),
-                    file_name=f"datos_evaluacion_ccr_{datetime.now().strftime('%Y%m%d')}.json",
-                    mime="application/json",
-                    help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
-                )
-        except Exception as e:
-            st.error(
-                f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
+                try:
+                    st.download_button(
+                        label="Guardar datos en formato JSON",
+                        data=json.dumps(save_data, indent=4),
+                        file_name=f"datos_evaluacion_ccr_{datetime.now().strftime('%Y%m%d')}.json",
+                        mime="application/json",
+                        help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
+                    )
+                except Exception as e:
+                    st.error(
+                        f"No se pudo crear el archivo JSON. Error: {str(e)}")
+
+            except Exception as e:
+                st.error(
+                    f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
     else:
         st.warning(
             "Por favor completa todos los campos obligatorios (fecha de nacimiento, altura y peso) para obtener tu evaluación de riesgo.")
 
-# Footer with disclaimer and links
+# Footer with disclaimer and links - keep this outside the tab5 section
 st.markdown("---")
 col1, col2 = st.columns([2, 1])
 
@@ -806,151 +825,12 @@ with col1:
 with col2:
     st.markdown("""
     **Enlaces útiles:**
-    - [Guía oficial del INC](https://bancos.salud.gob.ar/sites/default/files/2023-09/recomendaciones-para-el-tamizaje-organizado-cancer-colorrectal-poblacion-de-riesgo-promedio-argentina.pdf)
+    - [Programa Nacional de Prevención y Detección Temprana de CCR](https://www.argentina.gob.ar/salud/instituto-nacional-del-cancer/institucional/el-inc/pnccr)
     - [Instituto Nacional del Cáncer](https://www.argentina.gob.ar/salud/inc)
-    - [Programa Nacional de Prevención y Detección Temprana de CCR](https://www.argentina.gob.ar/salud/inc/prevencion/cancer-colorrectal)
+    - [Tamizaje](https://www.argentina.gob.ar/salud/inc/lineas-programaticas/pnccr-tamizaje)
     """)
 
 st.caption(
-    "© 2025 – Desarrollado para el Instituto Nacional del Cáncer de Argentina")
-st.markdown("---")
-st.markdown(f"📋 **Resumen final:** {summary}")
-
-# Opción para descargar PDF
-st.subheader("Guardar resultados")
-pdf_buffer = generate_pdf(age, bmi, summary, risk_category,
-                          recommendation, lifestyle_advice, any_symptoms)
-st.download_button(
-    label="Descargar resultados en PDF",
-    data=pdf_buffer,
-    file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
-    mime="application/pdf",
-    help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
-)
-
-# Save assessment to file option
-st.markdown("---")
-save_data = {
-    "fecha_evaluacion": datetime.now().strftime("%Y-%m-%d"),
-    "edad": age,
-    "imc": bmi,
-    "categoria_riesgo": risk_category,
-    "recomendacion": recommendation,
-    "resumen": summary
-}
-
-st.download_button(
-    label="Guardar datos en formato JSON",
-    data=json.dumps(save_data, indent=4),
-    file_name=f"datos_evaluacion_ccr_{datetime.now().strftime('%Y%m%d')}.json",
-    mime="application/json",
-    help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
-)
-try:
-    # Calculate age and BMI
-    age = calculate_age(dob)
-    bmi = calculate_bmi(height_cm, weight_kg)
-    st.markdown(f"**Edad:** {age} años | **IMC:** {bmi} kg/m²")
-
-    # Collect risk factors
-    personal_history = {
-        "ibd": ibd,
-        "lynch": hered,
-        "hamart": hamart,
-        "fap": fap,
-        "fasha": fasha,
-        "serrated_synd": serrated_synd
-    }
-
-    family_history = {
-        "family_crc": family_crc,
-        "family_before_60": family_before_60,
-        "family_multiple": family_multiple
-    }
-
-    polyp_history = {
-        "polyp10": polyp10,
-        "advanced_poly": advanced_poly,
-        "serrated": serrated,
-        "resected": resected,
-        "multiple_polyps": multiple_polyps,
-        "polyp_size": polyp_size
-    }
-
-    # Perform risk evaluation
-    risk_category, recommendation, summary, lifestyle_advice, symptoms_detail, bmi_note, symptoms_warning = evaluate_risk(
-        age, bmi, personal_history, family_history, polyp_history, any_symptoms
-    )
-
-    # Display results
-    st.markdown("---")
-    st.subheader("Estrategia de tamizaje recomendada")
-    if "Alto" in risk_category:
-        st.error(f"**{risk_category}**")
-    elif "Incrementado" in risk_category or "Intermedio" in risk_category:
-        st.info(f"**{risk_category}**")
-    else:
-        st.success(f"**{risk_category}**")
-
-    st.markdown(recommendation)
-    if bmi_note:
-        st.markdown(bmi_note)
-    if any_symptoms:
-        st.error(symptoms_warning)
-        st.markdown(symptoms_detail)
-
-    # Generate and allow download of PDF and JSON files
-    pdf_buffer = generate_pdf(
-        age, bmi, summary, risk_category, recommendation, lifestyle_advice, any_symptoms)
-    st.download_button(
-        label="Descargar resultados en PDF",
-        data=pdf_buffer,
-        file_name=f"evaluacion_riesgo_ccr_{datetime.now().strftime('%Y%m%d')}.pdf",
-        mime="application/pdf",
-        help="Descarga un PDF con los resultados de tu evaluación para compartir con tu médico"
-    )
-
-    save_data = {
-        "fecha_evaluacion": datetime.now().strftime("%Y-%m-%d"),
-        "edad": age,
-        "imc": bmi,
-        "categoria_riesgo": risk_category,
-        "recomendacion": recommendation,
-        "resumen": summary
-    }
-    st.download_button(
-        label="Guardar datos en formato JSON",
-        data=json.dumps(save_data, indent=4),
-        file_name=f"datos_evaluacion_ccr_{datetime.now().strftime('%Y%m%d')}.json",
-        mime="application/json",
-        help="Descarga los datos en formato JSON para futuras consultas o seguimiento"
-    )
-
-except Exception as e:
-    st.error(
-        f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
-except Exception as e:
-    st.error(
-        f"Error al procesar los datos. Por favor verifica la información ingresada. Detalles: {str(e)}")
-else:
-    st.warning("Por favor completa todos los campos obligatorios (fecha de nacimiento, altura y peso) para obtener tu evaluación de riesgo.")
-
-# Footer with disclaimer and links
-st.markdown("---")
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.markdown("""**Aviso:** Esta herramienta tiene fines educativos e informativos y está adaptada a la guía \"Recomendaciones para el tamizaje de CCR en población de riesgo promedio en Argentina\" del Instituto Nacional del Cáncer. No constituye una consulta médica ni reemplaza el consejo de un profesional de la salud. Te invitamos a usar esta información como base para conversar con tu médico sobre tu riesgo de cáncer colorrectal y las alternativas recomendadas en tu caso.""")
-
-with col2:
-    st.markdown("""
-    **Enlaces útiles:**
-    - [Guía oficial del INC](https://bancos.salud.gob.ar/sites/default/files/2023-09/recomendaciones-para-el-tamizaje-organizado-cancer-colorrectal-poblacion-de-riesgo-promedio-argentina.pdf)
-    - [Instituto Nacional del Cáncer](https://www.argentina.gob.ar/salud/inc)
-    - [Programa Nacional de Prevención y Detección Temprana de CCR](https://www.argentina.gob.ar/salud/inc/prevencion/cancer-colorrectal)
-    """)
-
-st.caption(
-    "© 2025 - Desarrollado para el Instituto Nacional del Cáncer de Argentina")
+    "© 2025 - Desarrollado por PEGASI Chubut. Todos los derechos reservados.")
 
 st.caption("© 2025 - Desarrollado para el Instituto Nacional del Cáncer de Argentina")
